@@ -43,6 +43,7 @@ defmodule Desktop.Deployment.Tooling do
   def priv_import!(pkg, src, opts \\ []) do
     # Copying libraries to app_name-vsn/priv and adding that to (DY)LD_LIBRARY_PATH
     strip = Keyword.get(opts, :strip, false)
+    IO.puts("Strip: #{strip}")
     extra_path = Keyword.get(opts, :extra_path, [])
     
     File.chmod!(src, 0o755)
@@ -85,6 +86,8 @@ defmodule Desktop.Deployment.Tooling do
     extname = Path.extname(file)
     is_binary = extname == ""
     is_library = Regex.match?(~r/\.(so|dylib|smp)($|\.)/, extname)
+    
+    cmd!("chmod", ["775", file])
 
     cond do
       os() == MacOS and is_library -> cmd!("strip", ["-x", "-S", file])
@@ -93,6 +96,7 @@ defmodule Desktop.Deployment.Tooling do
         IO.puts("Before strip #{file}")
         File.chmod!(file, 0o755)
         cmd!("strip", ["-s", file])
+        cmd!("chmod", ["775", file])
       true -> :ok
     end
 
