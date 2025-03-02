@@ -4,10 +4,13 @@ defmodule Desktop.Deployment.Tooling do
 
   def file_replace(file, from, to) do
     orig = File.read!(file)
+    File.chmod!(file, 0o755)
+
     content = String.replace(orig, from, to)
 
     if orig != content do
-      File.chmod!(file, Bitwise.bor(File.lstat!(file).mode, 0o200))
+      #File.chmod!(file, Bitwise.bor(File.lstat!(file).mode, 0o200))
+      File.chmod!(file, 0o755)
       File.write!(file, content)
     end
   end
@@ -39,11 +42,17 @@ defmodule Desktop.Deployment.Tooling do
 
   def priv_import!(pkg, src, opts \\ []) do
     # Copying libraries to app_name-vsn/priv and adding that to (DY)LD_LIBRARY_PATH
-    strip = Keyword.get(opts, :strip, true)
+    strip = Keyword.get(opts, :strip, false)
     extra_path = Keyword.get(opts, :extra_path, [])
+    
+    File.chmod!(src, 0o755)
 
     dst = Path.join([priv(pkg)] ++ extra_path ++ [Path.basename(src)])
+    
+    File.chmod!(dst, 0o755)
     File.mkdir_p(priv(pkg))
+    
+    
 
     if not File.exists?(dst) do
       File.cp!(src, dst)
@@ -67,6 +76,7 @@ defmodule Desktop.Deployment.Tooling do
 
     if not File.exists?(dst) do
       File.cp!(src, dst)
+      File.chmod!(dst, 0o755)
       strip_symbols(dst)
     end
   end
@@ -79,7 +89,10 @@ defmodule Desktop.Deployment.Tooling do
     cond do
       os() == MacOS and is_library -> cmd!("strip", ["-x", "-S", file])
       os() == MacOS and is_binary -> cmd!("strip", ["-u", "-r", file])
-      is_binary || is_library -> cmd!("strip", ["-s", file])
+      is_binary || is_library -> 
+        IO.puts("Before strip #{file}")
+        File.chmod!(file, 0o755)
+        cmd!("strip", ["-s", file])
       true -> :ok
     end
 
@@ -90,12 +103,14 @@ defmodule Desktop.Deployment.Tooling do
     # Copying redesitributables to app_name-vsn
     dst = Path.join(path, Path.basename(src))
     if not File.exists?(dst), do: File.cp!(src, dst)
+    File.chmod!(dst, 0o755)
   end
 
   # Same as File.cp! but uses directory as second argument.
   def cp!(src, destination) do
     dst = Path.join(destination, Path.basename(src))
     File.cp!(src, dst)
+    File.chmod!(dst, 0o755)
   end
 
   def eval_eex(filename, rel, pkg) do
