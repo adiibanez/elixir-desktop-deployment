@@ -90,13 +90,13 @@ defmodule Desktop.Deployment.Tooling do
     cmd!("chmod", ["775", file])
 
     cond do
-      os() == MacOS and is_library -> cmd!("strip", ["-x", "-S", file])
-      os() == MacOS and is_binary -> cmd!("strip", ["-u", "-r", file])
+      #os() == MacOS and is_library -> cmd!("strip", ["-x", "-S", file])
+      #os() == MacOS and is_binary -> cmd!("strip", ["-u", "-r", file])
       is_binary || is_library -> 
         IO.puts("Before strip #{file}")
         File.chmod!(file, 0o755)
-        cmd!("strip", ["-s", file])
-        cmd!("chmod", ["775", file])
+        #cmd!("strip", ["-s", file])
+        #cmd!("chmod", ["775", file])
       true -> :ok
     end
 
