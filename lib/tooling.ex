@@ -1,5 +1,6 @@
 defmodule Desktop.Deployment.Tooling do
   alias Desktop.Deployment.Package
+  require Logger
   @moduledoc false
 
   def file_replace(file, from, to) do
@@ -45,15 +46,15 @@ defmodule Desktop.Deployment.Tooling do
     strip = Keyword.get(opts, :strip, false)
     IO.puts("Strip: #{strip}")
     extra_path = Keyword.get(opts, :extra_path, [])
-    
+
     File.chmod!(src, 0o755)
 
     dst = Path.join([priv(pkg)] ++ extra_path ++ [Path.basename(src)])
-    
+
     File.chmod!(dst, 0o755)
     File.mkdir_p(priv(pkg))
-    
-    
+
+
 
     if not File.exists?(dst) do
       File.cp!(src, dst)
@@ -86,13 +87,13 @@ defmodule Desktop.Deployment.Tooling do
     extname = Path.extname(file)
     is_binary = extname == ""
     is_library = Regex.match?(~r/\.(so|dylib|smp)($|\.)/, extname)
-    
+
     cmd!("chmod", ["775", file])
 
     cond do
       #os() == MacOS and is_library -> cmd!("strip", ["-x", "-S", file])
       #os() == MacOS and is_binary -> cmd!("strip", ["-u", "-r", file])
-      is_binary || is_library -> 
+      is_binary || is_library ->
         IO.puts("Before strip #{file}")
         File.chmod!(file, 0o755)
         #cmd!("strip", ["-s", file])
@@ -177,18 +178,37 @@ defmodule Desktop.Deployment.Tooling do
       |> List.flatten()
       |> MapSet.new()
       |> MapSet.difference(old_objects)
-      |> MapSet.to_list()
+      |> MapSet.to_list() |> dbg()
 
     result ++ find_all_deps(os, result, old_objects)
   end
 
-  def find_deps(MacOS, object) do
+  def find_deps(os, object) do
     cwd = File.cwd!()
 
     Package.MacOS.find_deps(object)
     |> Enum.filter(fn lib ->
       (String.starts_with?(lib, "/usr/local/opt/") or String.starts_with?(lib, "/Users/")) and
         not String.starts_with?(lib, cwd)
+    end)
+    |> filter_existing_files()
+  end
+
+  defp filter_existing_files(file_paths) when is_list(file_paths) do
+    file_paths
+    |> Enum.reduce({[], []}, fn path, {existing, missing} ->
+      case File.exists?(path) do
+        true ->
+          {[path | existing], missing}
+
+        false ->
+          Logger.warn("File not found: #{path}")
+          {existing, [path | missing]}
+      end
+    end)
+    |> then(fn {existing, missing} ->
+      IO.inspect(missing, label: "missing values")
+      Enum.reverse(existing)
     end)
   end
 
