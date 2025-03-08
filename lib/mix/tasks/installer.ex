@@ -5,6 +5,14 @@ defmodule Mix.Tasks.Desktop.Installer do
 
   @shortdoc "Creates a platform specific installer package."
   def run(_args, config \\ Mix.Project.config()) do
+    xcode_platform_name = System.get_env("PLATFORM_NAME")
+
+    if xcode_platform_name == "iphonesimulator" or
+         xcode_platform_name == "iphoneos" do
+      IO.puts("ios build, ignoring #{xcode_platform_name}")
+      System.halt(0)
+    end
+
     release =
       Enum.find(config[:releases] || [], fn {_name, rel} ->
         steps = Keyword.get(rel, :steps, [])

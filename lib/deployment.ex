@@ -4,6 +4,16 @@ defmodule Desktop.Deployment do
   @moduledoc false
 
   def package(rel \\ nil) do
+    xcode_platform_name = System.get_env("PLATFORM_NAME")
+
+    IO.puts("xcode platform #{xcode_platform_name}")
+
+    if xcode_platform_name == "iphonesimulator" or
+         xcode_platform_name == "iphoneos" do
+      IO.puts("ios build, ignoring #{xcode_platform_name}")
+      System.halt(0)
+    end
+
     config = Mix.Project.config()
 
     case config[:package] do
@@ -20,6 +30,14 @@ defmodule Desktop.Deployment do
   end
 
   def generate_installer(%Mix.Release{} = rel) do
+    xcode_platform_name = System.get_env("PLATFORM_NAME")
+
+    if xcode_platform_name == "iphonesimulator" or
+         xcode_platform_name == "iphoneos" do
+      IO.puts("ios build, ignoring #{xcode_platform_name}")
+      System.halt(0)
+    end
+
     if Mix.env() != :prod do
       IO.puts("""
         Desktop.Deployment can only build MIX_ENV=prod releases.
